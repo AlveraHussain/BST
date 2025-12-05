@@ -1,0 +1,171 @@
+#include <iostream>
+#include <string>
+#include <sstream>
+using namespace std;
+
+class TimeCapsule {
+public:
+    int year;
+    string eventName;
+    TimeCapsule* left;
+    TimeCapsule* right;
+
+    TimeCapsule(int y, string name) {
+        year = y;
+        eventName = name;
+        left = right = nullptr;
+    }
+};
+
+class TimeStream {
+private:
+    TimeCapsule* root;
+
+    TimeCapsule* insert(TimeCapsule* node, int year, string name) {
+        if (node == nullptr) {
+            cout << "> System: Injecting " << year << "... Timeline stable.\n";
+            return new TimeCapsule(year, name);
+        }
+        if (year < node->year) node->left = insert(node->left, year, name);
+        else if (year > node->year) node->right = insert(node->right, year, name);
+        return node;
+    }
+
+    TimeCapsule* search(TimeCapsule* node, int year) {
+        if (!node) return nullptr;
+        if (node->year == year) return node;
+        if (year < node->year) return search(node->left, year);
+        return search(node->right, year);
+    }
+
+    TimeCapsule* findMin(TimeCapsule* node) {
+        while (node && node->left)
+            node = node->left;
+        return node;
+    }
+
+    TimeCapsule* remove(TimeCapsule* node, int year) {
+        if (!node) return nullptr;
+
+        if (year < node->year)
+            node->left = remove(node->left, year);
+        else if (year > node->year)
+            node->right = remove(node->right, year);
+        else {
+            if (!node->left && !node->right) {
+                delete node;
+                return nullptr;
+            }
+            else if (!node->left) {
+                TimeCapsule* temp = node->right;
+                delete node;
+                return temp;
+            }
+            else if (!node->right) {
+                TimeCapsule* temp = node->left;
+                delete node;
+                return temp;
+            }
+            else {
+                TimeCapsule* temp = findMin(node->right);
+                node->year = temp->year;
+                node->eventName = temp->eventName;
+                node->right = remove(node->right, temp->year);
+            }
+        }
+        return node;
+    }
+
+    void inOrder(TimeCapsule* node) {
+        if (!node) return;
+        inOrder(node->left);
+        cout << node->year << ": " << node->eventName << endl;
+        inOrder(node->right);
+    }
+
+public:
+    TimeStream() { root = nullptr; }
+
+    void inject(int year, string name) {
+        root = insert(root, year, name);
+    }
+
+    void paradox(int year) {
+        cout << "> Alert: Paradox detected at " << year << "!\n";
+        root = remove(root, year);
+        cout << "> System: Year " << year << " removed. Timeline stabilized.\n";
+    }
+
+    void searchYear(int year) {
+        cout << "> Query: Searching for " << year << "...\n";
+        TimeCapsule* result = search(root, year);
+        if (result)
+            cout << "> Result: Event Found! [" << result->year << ": " << result->eventName << "]\n";
+        else
+            cout << "> Result: Year " << year << " not found in current timeline.\n";
+    }
+
+    void report() {
+        cout << "\n> COMMAND: CHRONOLOGICAL REPORT\n";
+        cout << "-------------------------------\n";
+        inOrder(root);
+        cout << "-------------------------------\n";
+    }
+};
+
+// -----------------------------------------------------
+// Main with runtime command processing
+// -----------------------------------------------------
+int main() {
+    TimeStream timeline;
+
+    string input;
+    cout << "=== TIME-STREAM STABILIZER ONLINE ===\n";
+    cout << "Enter commands (INJECT, SEARCH, PARADOX, REPORT, EXIT):\n\n";
+
+    while (true) {
+        cout << "> ";
+        getline(cin, input);
+
+        if (input == "EXIT") break;
+
+        stringstream ss(input);
+        string command;
+        ss >> command;
+
+        if (command == "INJECT") {
+            int year;
+            ss >> year;
+
+            string eventName;
+            getline(ss, eventName);
+
+            // Remove possible quotes and leading spaces
+            if (eventName.size() > 0 && eventName[0] == ' ') 
+                eventName.erase(0, 1);
+            if (eventName.front() == '"') eventName.erase(0, 1);
+            if (eventName.back() == '"') eventName.pop_back();
+
+            timeline.inject(year, eventName);
+        }
+        else if (command == "SEARCH") {
+            int year;
+            ss >> year;
+            timeline.searchYear(year);
+        }
+        else if (command == "PARADOX") {
+            int year;
+            ss >> year;
+            timeline.paradox(year);
+        }
+        else if (command == "REPORT") {
+            timeline.report();
+        }
+        else {
+            cout << "Invalid command.\n";
+        }
+    }
+
+    cout << "System shutting down... Timeline secure.\n";
+    return 0;
+}
